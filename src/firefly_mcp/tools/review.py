@@ -1,0 +1,99 @@
+from __future__ import annotations
+
+from datetime import date, timedelta
+from typing import Annotated
+
+from pydantic import Field
+
+from firefly_mcp.client import FireflyClient
+from firefly_mcp.models import CompactTransaction, TransactionUpdate
+
+
+def _needs_review(txn: CompactTransaction, filter_type: str) -> bool:
+    """Check if a transaction matches the review filter."""
+    if filter_type == "untagged":
+        return len(txn.tags) == 0
+    if filter_type == "uncategorized":
+        return txn.category is None
+    if filter_type == "unbudgeted":
+        return txn.budget is None
+    # all_unreviewed: missing any of tags, category, or budget
+    return len(txn.tags) == 0 or txn.category is None or txn.budget is None
+
+
+async def get_review_queue(
+    days_back: Annotated[int, Field(description="How many days back to look", ge=1)] = 30,
+    filter: Annotated[
+        str,
+        Field(description="Filter: 'untagged', 'uncategorized', 'unbudgeted', or 'all_unreviewed'"),
+    ] = "all_unreviewed",
+    *,
+    client: FireflyClient,
+) -> list[CompactTransaction]:
+    """Fetch transactions needing review -- missing tags, categories, or budgets."""
+    end = date.today()
+    start = end - timedelta(days=days_back)
+
+    all_txns: list[CompactTransaction] = []
+    page = 1
+
+    while True:
+        data = await client.list_transactions(
+            start=start.isoformat(),
+            end=end.isoformat(),
+            type="withdrawal",
+            page=page,
+        )
+        for item in data.get("data", []):
+            txn = CompactTransaction.from_api(item)
+            if _needs_review(txn, filter):
+                all_txns.append(txn)
+
+        total_pages = data.get("meta", {}).get("pagination", {}).get("total_pages", 1)
+        if page >= total_pages:
+            break
+        page += 1
+
+    return all_txns
+
+
+async def categorize_transactions(
+    updates: Annotated[
+        list[TransactionUpdate],
+        Field(description="List of transaction updates to apply"),
+    ],
+    *,
+    client: FireflyClient,
+) -> dict:
+    """Batch-apply categories, tags, budgets, and notes to multiple transactions."""
+    succeeded = 0
+    failed: list[dict] = []
+
+    for update in updates:
+        payload: dict = {"transactions": [{}]}
+        txn_payload = payload["transactions"][0]
+
+        if update.category is not None:
+            txn_payload["category_name"] = update.category
+        if update.tags is not None:
+            txn_payload["tags"] = update.tags
+        if update.budget is not None:
+            txn_payload["budget_name"] = update.budget
+        if update.notes is not None:
+            txn_payload["notes"] = update.notes
+
+        if not txn_payload:
+            continue
+
+        try:
+            await client.update_transaction(update.transaction_id, payload)
+            succeeded += 1
+        except Exception as e:
+            failed.append({"transaction_id": update.transaction_id, "error": str(e)})
+
+    return {
+        "succeeded": succeeded,
+        "failed": len(failed),
+        "errors": failed,
+        "total": len(updates),
+    }
