@@ -85,6 +85,22 @@ class FireflyClient:
         resp.raise_for_status()
         return resp.json()
 
+    # -- Accounts --
+
+    async def create_account(self, payload: dict) -> dict:
+        resp = await self._firefly.post("/accounts", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def update_account(self, account_id: int, payload: dict) -> dict:
+        resp = await self._firefly.put(f"/accounts/{account_id}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete_account(self, account_id: int) -> None:
+        resp = await self._firefly.delete(f"/accounts/{account_id}")
+        resp.raise_for_status()
+
     # -- Tags --
 
     async def list_tags(self) -> dict:
@@ -96,6 +112,15 @@ class FireflyClient:
         resp = await self._firefly.post("/tags", json={"tag": name})
         resp.raise_for_status()
         return resp.json()
+
+    async def update_tag(self, tag_id: int, payload: dict) -> dict:
+        resp = await self._firefly.put(f"/tags/{tag_id}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete_tag(self, tag_id: int) -> None:
+        resp = await self._firefly.delete(f"/tags/{tag_id}")
+        resp.raise_for_status()
 
     # -- Categories --
 
@@ -109,6 +134,15 @@ class FireflyClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def update_category(self, category_id: int, payload: dict) -> dict:
+        resp = await self._firefly.put(f"/categories/{category_id}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete_category(self, category_id: int) -> None:
+        resp = await self._firefly.delete(f"/categories/{category_id}")
+        resp.raise_for_status()
+
     # -- Budgets --
 
     async def list_budgets(self) -> dict:
@@ -120,6 +154,15 @@ class FireflyClient:
         resp = await self._firefly.post("/budgets", json={"name": name})
         resp.raise_for_status()
         return resp.json()
+
+    async def update_budget(self, budget_id: int, payload: dict) -> dict:
+        resp = await self._firefly.put(f"/budgets/{budget_id}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete_budget(self, budget_id: int) -> None:
+        resp = await self._firefly.delete(f"/budgets/{budget_id}")
+        resp.raise_for_status()
 
     async def create_budget_limit(
         self, budget_id: int, amount: float, start: str, end: str, currency_code: str = "MYR"
@@ -142,6 +185,76 @@ class FireflyClient:
         resp = await self._firefly.get("/bills")
         resp.raise_for_status()
         return resp.json()
+
+    async def create_bill(self, payload: dict) -> dict:
+        resp = await self._firefly.post("/bills", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def update_bill(self, bill_id: int, payload: dict) -> dict:
+        resp = await self._firefly.put(f"/bills/{bill_id}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete_bill(self, bill_id: int) -> None:
+        resp = await self._firefly.delete(f"/bills/{bill_id}")
+        resp.raise_for_status()
+
+    # -- Rules --
+
+    async def list_rules(self, page: int = 1) -> dict:
+        resp = await self._firefly.get("/rules", params={"page": page})
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_rule(self, rule_id: int) -> dict:
+        resp = await self._firefly.get(f"/rules/{rule_id}")
+        resp.raise_for_status()
+        return resp.json()
+
+    async def create_rule(self, payload: dict) -> dict:
+        resp = await self._firefly.post("/rules", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def update_rule(self, rule_id: int, payload: dict) -> dict:
+        resp = await self._firefly.put(f"/rules/{rule_id}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete_rule(self, rule_id: int) -> None:
+        resp = await self._firefly.delete(f"/rules/{rule_id}")
+        resp.raise_for_status()
+
+    async def test_rule(self, rule_id: int) -> dict:
+        resp = await self._firefly.get(f"/rules/{rule_id}/test")
+        resp.raise_for_status()
+        return resp.json()
+
+    async def trigger_rule(self, rule_id: int) -> None:
+        resp = await self._firefly.post(f"/rules/{rule_id}/trigger")
+        resp.raise_for_status()
+
+    # -- Rule Groups --
+
+    async def list_rule_groups(self) -> dict:
+        resp = await self._firefly.get("/rule-groups")
+        resp.raise_for_status()
+        return resp.json()
+
+    async def create_rule_group(self, payload: dict) -> dict:
+        resp = await self._firefly.post("/rule-groups", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def test_rule_group(self, group_id: int) -> dict:
+        resp = await self._firefly.get(f"/rule-groups/{group_id}/test")
+        resp.raise_for_status()
+        return resp.json()
+
+    async def trigger_rule_group(self, group_id: int) -> None:
+        resp = await self._firefly.post(f"/rule-groups/{group_id}/trigger")
+        resp.raise_for_status()
 
     # -- Insights --
 

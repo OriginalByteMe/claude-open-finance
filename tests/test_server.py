@@ -21,6 +21,9 @@ async def test_server_has_all_tools():
         "get_spending_summary",
         "get_financial_context",
         "manage_metadata",
+        "manage_automations",
+        "test_automation",
+        "get_automation_context",
     }
     assert expected_tools.issubset(tool_names), f"Missing tools: {expected_tools - tool_names}"
 
@@ -31,7 +34,7 @@ async def test_server_has_prompts():
 
     prompts = await mcp.list_prompts()
     prompt_names = {p.name for p in prompts}
-    expected_prompts = {"review_imports", "monthly_review"}
+    expected_prompts = {"review_imports", "monthly_review", "setup_automation"}
     assert expected_prompts.issubset(prompt_names), f"Missing prompts: {expected_prompts - prompt_names}"
 
 
