@@ -61,7 +61,7 @@ services:
       start_period: 10s
 
   importer:
-    image: fireflyiii/data-importer:version-1.5.8
+    image: fireflyiii/data-importer:version-2.2.1
     hostname: importer
     container_name: firefly_iii_test_importer
     restart: "no"
