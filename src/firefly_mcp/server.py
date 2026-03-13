@@ -10,14 +10,16 @@ from fastmcp.server.lifespan import lifespan
 from fastmcp.dependencies import CurrentContext
 
 from firefly_mcp.client import FireflyClient
-from firefly_mcp.models import TransactionUpdate, RuleTriggerInput, RuleActionInput
+from firefly_mcp.models import BulkTransactionUpdate, TransactionUpdate, RuleTriggerInput, RuleActionInput
 from firefly_mcp.tools.import_tool import import_bank_statement as _import_bank_statement
 from firefly_mcp.tools.review import get_review_queue as _get_review_queue
 from firefly_mcp.tools.review import categorize_transactions as _categorize_transactions
+from firefly_mcp.tools.review import update_transactions as _update_transactions
 from firefly_mcp.tools.search import search_transactions as _search_transactions
 from firefly_mcp.tools.insights import get_spending_summary as _get_spending_summary
 from firefly_mcp.tools.metadata import get_financial_context as _get_financial_context
 from firefly_mcp.tools.metadata import manage_metadata as _manage_metadata
+from firefly_mcp.tools.recurring import discover_recurring as _discover_recurring
 from firefly_mcp.tools.automations import manage_automations as _manage_automations
 from firefly_mcp.tools.automations import test_automation as _test_automation
 from firefly_mcp.tools.automations import get_automation_context as _get_automation_context
@@ -50,7 +52,10 @@ mcp = FastMCP(
         "find transactions needing review. Use manage_metadata to create, update, or "
         "delete categories, tags, budgets, accounts, and bills. Use manage_automations "
         "to create and manage automation rules that automatically categorize transactions. "
-        "Always test automations with test_automation before firing them."
+        "Always test automations with test_automation before firing them. "
+        "Use update_transactions for bulk changes including converting transaction types "
+        "(e.g., withdrawals to transfers) — provide type and destination_id/destination_name. "
+        "Use discover_recurring to find subscription and bill patterns in transaction history."
     ),
     lifespan=app_lifespan,
 )
@@ -107,6 +112,22 @@ async def categorize_transactions(
 
 
 @mcp.tool
+async def update_transactions(
+    updates: list[BulkTransactionUpdate],
+    ctx: Context = CurrentContext(),
+) -> dict:
+    """Bulk-update transactions: change type, destination, description, amount, and metadata.
+
+    Use this to convert withdrawals to transfers (set type='transfer' and
+    destination_id or destination_name), reclassify transaction types, update
+    descriptions, or change amounts in bulk. For type conversion to 'transfer',
+    you must provide the destination asset account.
+    """
+    client = ctx.lifespan_context["client"]
+    return await _update_transactions(updates, client=client)
+
+
+@mcp.tool
 async def search_transactions(
     query: str | None = None,
     date_from: str | None = None,
@@ -148,6 +169,23 @@ async def get_spending_summary(
     """
     client = ctx.lifespan_context["client"]
     return await _get_spending_summary(period, group_by, client=client)
+
+
+@mcp.tool
+async def discover_recurring(
+    days_back: int = 180,
+    min_occurrences: int = 3,
+    ctx: Context = CurrentContext(),
+) -> dict:
+    """Discover recurring transactions (subscriptions, bills, regular payments).
+
+    Analyzes withdrawal history over the specified period, groups similar
+    transactions, and detects frequency patterns (weekly, monthly, yearly, etc.).
+    Returns recurring groups with frequency, amount range, and consistency score.
+    Use this to find subscriptions that should have bills or rules set up.
+    """
+    client = ctx.lifespan_context["client"]
+    return await _discover_recurring(days_back, min_occurrences, client=client)
 
 
 @mcp.tool

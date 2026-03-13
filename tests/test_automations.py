@@ -252,6 +252,10 @@ async def test_get_automation_context():
     assert "action_keywords" in result
     assert "trigger_types" in result
     assert "rule_groups" in result
+    assert "known_quirks" in result
     assert "description_contains" in result["trigger_keywords"]
     assert "set_category" in result["action_keywords"]
     assert result["rule_groups"][0]["title"] == "Auto-categorize"
+    # Verify convert_transfer quirk is documented
+    quirk_actions = [q["action"] for q in result["known_quirks"]]
+    assert "convert_transfer" in quirk_actions
