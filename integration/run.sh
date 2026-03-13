@@ -53,8 +53,8 @@ echo "  Phase 2: Run Integration Tests"
 echo "============================================"
 
 cd "$REPO_ROOT"
-uv run --extra dev pytest integration/test_mcp_tools.py -v --tb=short 2>&1
-TEST_EXIT=$?
+TEST_EXIT=0
+uv run --extra dev pytest integration/test_mcp_tools.py -v --tb=short 2>&1 || TEST_EXIT=$?
 
 if [ "$KEEP" = false ] && [ "$TEST_ONLY" = false ]; then
     echo ""
