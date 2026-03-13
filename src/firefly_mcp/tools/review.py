@@ -6,7 +6,7 @@ from typing import Annotated
 from pydantic import Field
 
 from firefly_mcp.client import FireflyClient
-from firefly_mcp.models import CompactTransaction, TransactionUpdate
+from firefly_mcp.models import BulkTransactionUpdate, CompactTransaction, TransactionUpdate
 
 
 def _needs_review(txn: CompactTransaction, filter_type: str) -> bool:
@@ -81,6 +81,63 @@ async def categorize_transactions(
             txn_payload["budget_name"] = update.budget
         if update.notes is not None:
             txn_payload["notes"] = update.notes
+
+        if not txn_payload:
+            continue
+
+        try:
+            await client.update_transaction(update.transaction_id, payload)
+            succeeded += 1
+        except Exception as e:
+            failed.append({"transaction_id": update.transaction_id, "error": str(e)})
+
+    return {
+        "succeeded": succeeded,
+        "failed": len(failed),
+        "errors": failed,
+        "total": len(updates),
+    }
+
+
+async def update_transactions(
+    updates: Annotated[
+        list[BulkTransactionUpdate],
+        Field(description="List of transaction updates to apply"),
+    ],
+    *,
+    client: FireflyClient,
+) -> dict:
+    """Bulk-update transactions: change type, destination, description, amount, and metadata.
+
+    Use this to convert withdrawals to transfers, set destination accounts,
+    or make any other changes to transaction fields in bulk.
+    For type conversion to 'transfer', provide destination_id (account ID) or
+    destination_name (account name) along with type='transfer'.
+    """
+    succeeded = 0
+    failed: list[dict] = []
+
+    field_map = {
+        "type": "type",
+        "source_id": "source_id",
+        "destination_id": "destination_id",
+        "destination_name": "destination_name",
+        "category": "category_name",
+        "tags": "tags",
+        "budget": "budget_name",
+        "notes": "notes",
+        "description": "description",
+        "amount": "amount",
+    }
+
+    for update in updates:
+        payload: dict = {"transactions": [{}]}
+        txn_payload = payload["transactions"][0]
+
+        for attr, api_field in field_map.items():
+            value = getattr(update, attr)
+            if value is not None:
+                txn_payload[api_field] = value
 
         if not txn_payload:
             continue

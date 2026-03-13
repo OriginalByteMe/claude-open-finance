@@ -13,6 +13,22 @@ class TransactionUpdate(BaseModel):
     notes: str | None = None
 
 
+class BulkTransactionUpdate(BaseModel):
+    """Input model for update_transactions tool — supports all transaction fields."""
+
+    transaction_id: int
+    type: str | None = None  # "withdrawal", "deposit", "transfer"
+    source_id: int | None = None
+    destination_id: int | None = None
+    destination_name: str | None = None
+    category: str | None = None
+    tags: list[str] | None = None
+    budget: str | None = None
+    notes: str | None = None
+    description: str | None = None
+    amount: str | None = None
+
+
 class RuleTriggerInput(BaseModel):
     """Input model for a rule trigger condition."""
 

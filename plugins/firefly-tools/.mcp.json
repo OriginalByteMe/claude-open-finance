@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "firefly": {
-      "command": "uvx",
-      "args": ["--from", "git+https://github.com/OriginalByteMe/firefly-tools", "firefly-mcp"],
+      "command": "uv",
+      "args": ["run", "--directory", "${CLAUDE_PROJECT_ROOT}", "firefly-mcp"],
       "cwd": "${CLAUDE_PLUGIN_ROOT}"
     }
   }

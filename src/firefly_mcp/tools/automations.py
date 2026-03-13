@@ -242,4 +242,27 @@ async def get_automation_context(*, client: FireflyClient) -> dict:
         "action_keywords": sorted(ACTION_KEYWORDS),
         "trigger_types": ["store-journal", "update-journal"],
         "rule_groups": groups,
+        "known_quirks": [
+            {
+                "action": "convert_transfer",
+                "issue": (
+                    "Firefly III often rejects convert_transfer in rules with various "
+                    "value formats. The reliable workaround is to use "
+                    "'set_destination_account' with the name of an asset account instead. "
+                    "This effectively converts a withdrawal to a transfer by redirecting "
+                    "the destination to an internal account."
+                ),
+                "workaround_example": {
+                    "instead_of": {"type": "convert_transfer", "value": "Transfer Account"},
+                    "use": {"type": "set_destination_account", "value": "My Investment Account"},
+                },
+            },
+            {
+                "action": "convert_withdrawal",
+                "issue": (
+                    "When converting deposits to withdrawals, the source and destination "
+                    "accounts are swapped. Ensure the resulting transaction makes sense."
+                ),
+            },
+        ],
     }
