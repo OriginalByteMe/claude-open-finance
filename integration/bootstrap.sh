@@ -58,7 +58,8 @@ if [ -z "$USER_PASSWORD" ]; then
     echo "    (User may already exist, proceeding with token generation)"
 fi
 
-echo "==> Ensuring Passport personal access client exists..."
+echo "==> Setting up Passport (keys + personal access client)..."
+docker exec "$APP_CONTAINER" php artisan passport:keys --force --no-interaction 2>&1 || true
 docker exec "$APP_CONTAINER" php artisan passport:client --personal --name="Integration Test" --no-interaction 2>&1 || true
 
 echo "==> Generating Personal Access Token..."
