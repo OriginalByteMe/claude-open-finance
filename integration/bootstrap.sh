@@ -44,6 +44,10 @@ done
 echo "==> Running database migrations..."
 docker exec "$APP_CONTAINER" php artisan migrate --force --seed 2>&1 || true
 
+echo "==> Running Firefly III database upgrade & corrections..."
+docker exec "$APP_CONTAINER" php artisan firefly-iii:upgrade-database 2>&1 || true
+docker exec "$APP_CONTAINER" php artisan firefly-iii:correct-database 2>&1 || true
+
 echo "==> Creating test user ($TEST_EMAIL)..."
 # Newer Firefly III versions renamed the command from firefly-iii:create-first-user
 # to system:create-first-user. Try new name first, fall back to old.
@@ -59,7 +63,10 @@ if [ -z "$USER_PASSWORD" ]; then
 fi
 
 echo "==> Setting up Passport (keys + personal access client)..."
-docker exec "$APP_CONTAINER" php artisan passport:keys --force --no-interaction 2>&1 || true
+# Use Firefly III's own wrapper first, fall back to standard passport commands
+docker exec "$APP_CONTAINER" php artisan firefly-iii:laravel-passport-keys 2>&1 \
+    || docker exec "$APP_CONTAINER" php artisan passport:keys --force --no-interaction 2>&1 \
+    || true
 docker exec "$APP_CONTAINER" php artisan passport:client --personal --name="Integration Test" --no-interaction 2>&1 || true
 
 echo "==> Generating Personal Access Token..."
@@ -87,18 +94,19 @@ fi
 echo "    Token: ${TOKEN:0:20}..."
 
 echo "==> Verifying token with Firefly III API..."
+# Use /api/v1/accounts (authenticated) to verify the token actually works
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Accept: application/json" \
-    "http://localhost:8080/api/v1/about")
+    "http://localhost:8080/api/v1/accounts")
 
 if [ "$HTTP_CODE" = "200" ]; then
     echo "    API verification successful (HTTP $HTTP_CODE)"
 else
     echo "    WARNING: API returned HTTP $HTTP_CODE — token may not work"
-    echo "    Trying /api/v1/about response:"
+    echo "    Response from /api/v1/accounts:"
     curl -s -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" \
-        "http://localhost:8080/api/v1/about" | head -5
+        "http://localhost:8080/api/v1/accounts" | head -10
 fi
 
 echo "==> Writing .env.test file..."
